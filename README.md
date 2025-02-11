@@ -1,0 +1,1 @@
+# streamlit-disease-detection
