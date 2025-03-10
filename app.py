@@ -94,13 +94,21 @@ if uploaded_file is not None:
         ax.imshow(img)
         ax.axis("off")
 
+# Modify the visualization section where you draw bounding boxes
         for idx, (detection, cropped) in enumerate(zip(detections, cropped_images)):
             x1, y1, x2, y2 = detection["bbox"]
             conf = detection["confidence"]
             label = classify_object(cropped)
-            st.write(f"📍 **Object {idx+1}: {label} (Confidence: {conf:.2f})**")
+            
+            # Update the text to include confidence
+            display_text = f"{label} ({conf:.2f})"
+            
+            # Add rectangle for bounding box
             ax.add_patch(plt.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor="green", linewidth=2, fill=False))
-            ax.text(x1, y1 - 10, f"{label}", fontsize=12, color="green", weight="bold", bbox=dict(facecolor="white", alpha=0.8))
+            
+            # Add text with confidence
+            ax.text(x1, y1 - 10, display_text, fontsize=12, color="green", weight="bold", 
+                    bbox=dict(facecolor="white", alpha=0.8))
 
         st.pyplot(fig)
     else:
