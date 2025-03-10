@@ -7,6 +7,9 @@ from ultralytics import YOLO
 from efficientnet_pytorch import EfficientNet
 from torchvision import transforms
 from PIL import Image
+import os
+import base64
+import streamlit.components.v1 as components
 
 # Paths to models
 YOLO_MODEL_PATH = "models/best.pt"
@@ -43,8 +46,7 @@ transform = transforms.Compose([
 
 # Object detection function
 def detect_objects(image):
-    """ Runs YOLO object detection on an image. """
-    results = yolo_model(image)  # Run YOLO detection
+    results = yolo_model(image)
     img = np.array(image)
     detections = []
     cropped_images = []
@@ -53,22 +55,20 @@ def detect_objects(image):
         for box in result.boxes:
             x1, y1, x2, y2 = map(int, box.xyxy[0])
             conf = float(box.conf[0])
-            cropped = img[y1:y2, x1:x2]  # Crop detected object
+            cropped = img[y1:y2, x1:x2]
             if cropped.shape[0] > 0 and cropped.shape[1] > 0:
                 cropped_images.append(cropped)
                 detections.append({
                     "bbox": (x1, y1, x2, y2),
                     "confidence": conf
                 })
-
     return detections, cropped_images, img
 
 # Classification function
 def classify_object(image):
-    """ Classifies a single cropped object using EfficientNet. """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = Image.fromarray(image)
-    image = transform(image).unsqueeze(0).to("cpu")  # Move to CPU
+    image = transform(image).unsqueeze(0).to("cpu")
     with torch.no_grad():
         outputs = efficientnet_model(image)
         _, predicted = torch.max(outputs, 1)
@@ -81,18 +81,16 @@ st.write("Upload an image to detect and classify diseases in poultry.")
 # File uploader
 uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
 
+# Load uploaded image and perform detection
 if uploaded_file is not None:
-    # Read image
     image = Image.open(uploaded_file)
-    
-    # Run detection
+    # st.image(image, caption="Uploaded Image", use_column_width=True)
     detections, cropped_images, img = detect_objects(image)
 
     if detections:
         st.write(f"✅ Detected {len(detections)} feces areas!")
-
         fig, ax = plt.subplots(figsize=(8, 6))
-        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert BGR to RGB for correct display
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         ax.imshow(img)
         ax.axis("off")
 
@@ -101,13 +99,133 @@ if uploaded_file is not None:
             conf = detection["confidence"]
             label = classify_object(cropped)
             st.write(f"📍 **Object {idx+1}: {label} (Confidence: {conf:.2f})**")
-            
-            # Draw bounding box
             ax.add_patch(plt.Rectangle((x1, y1), x2 - x1, y2 - y1, edgecolor="green", linewidth=2, fill=False))
             ax.text(x1, y1 - 10, f"{label}", fontsize=12, color="green", weight="bold", bbox=dict(facecolor="white", alpha=0.8))
 
-        # Display final image with bounding boxes
         st.pyplot(fig)
-
     else:
         st.write("⚠️ No objects detected in the image.")
+
+# Display example images from "example_images" folder in a horizontal carousel with arrows
+EXAMPLES_FOLDER = "example_images"
+st.write("### Example Images")
+
+if os.path.exists(EXAMPLES_FOLDER) and os.path.isdir(EXAMPLES_FOLDER):
+    example_files = [f for f in os.listdir(EXAMPLES_FOLDER) if f.lower().endswith((".jpg", "png", "jpeg"))]
+    if example_files:
+        image_html = """
+        <style>
+        .scroll-container {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 10px 0;
+            scroll-behavior: smooth;
+            align-items: center;
+            width: 100%;
+        }
+        .image-item {
+            width: 150px;
+            margin: 0 10px;
+            flex-shrink: 0;
+            text-align: center;
+        }
+        .image-container {
+            width: 150px;
+            height: 150px;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .image-caption {
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #555;
+        }
+        .scroll-button {
+            cursor: pointer;
+            font-size: 24px;
+            border: none;
+            background: rgba(0,0,0,0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 5px;
+            color:
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+        /* For Webkit browsers like Chrome/Safari */
+        .scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        .scroll-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        </style>
+        <div>
+            <div class='scroll-container' id='carousel'>
+        """
+        for img_file in example_files:
+            img_path = os.path.join(EXAMPLES_FOLDER, img_file)
+            with open(img_path, "rb") as img_file_obj:
+                encoded_img = base64.b64encode(img_file_obj.read()).decode()
+            image_html += f"""
+                <div class='image-item'>
+                    <div class='image-container'>
+                        <img src='data:image/png;base64,{encoded_img}' onclick='selectImage("{img_path}")'>
+                    </div>
+                    <div class='image-caption'>{img_file}</div>
+                </div>
+            """
+        
+        image_html += """
+            </div>
+            <div class='controls'>
+                <button class='scroll-button' onclick='scrollLeft()'>&#9664;</button>
+                <button class='scroll-button' onclick='scrollRight()'>&#9654;</button>
+            </div>
+        </div>
+        <script>
+        function scrollLeft() {
+            document.getElementById('carousel').scrollBy({left: -300, behavior: 'smooth'});
+        }
+        function scrollRight() {
+            document.getElementById('carousel').scrollBy({left: 300, behavior: 'smooth'});
+        }
+        function selectImage(path) {
+            // You can implement selection functionality here
+            console.log("Selected image:", path);
+            // This would need integration with Streamlit
+        }
+        </script>
+        """
+        components.html(image_html, height=230)
+    else:
+        st.write("No example images found.")
+else:
+    st.write("Example images folder not found.")
