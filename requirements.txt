@@ -2,7 +2,7 @@ streamlit
 torch
 torchvision
 ultralytics
-opencv-python-headless
+opencv-python-headless==4.8.0.74
 efficientnet_pytorch
 numpy
 matplotlib
