@@ -75,7 +75,7 @@ def classify_object(image):
     return class_names[predicted.item()]
 
 # Streamlit UI
-st.title("🐔 Poultry Disease Detection System")
+st.title("Poultry Disease Detection System")
 st.write("Upload an image to detect and classify diseases in poultry.")
 
 # File uploader
@@ -88,7 +88,7 @@ if uploaded_file is not None:
     detections, cropped_images, img = detect_objects(image)
 
     if detections:
-        st.write(f"✅ Detected {len(detections)} feces areas!")
+        st.write(f"Detected {len(detections)} feces areas!")
         fig, ax = plt.subplots(figsize=(8, 6))
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         ax.imshow(img)
@@ -112,7 +112,7 @@ if uploaded_file is not None:
 
         st.pyplot(fig)
     else:
-        st.write("⚠️ No objects detected in the image.")
+        st.write("No objects detected in the image.")
 
 # Display example images from "example_images" folder in a horizontal carousel with arrows
 EXAMPLES_FOLDER = "example_images"
